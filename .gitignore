@@ -1,0 +1,14 @@
+# Cache files - regenerated each run
+assets/cache/
+cache/
+
+# Node modules
+node_modules/
+
+# Temporary files
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
