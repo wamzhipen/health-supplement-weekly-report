@@ -28,7 +28,8 @@ try {
 // ==================== 配置 ====================
 const OUTPUT_DIR = path.join(__dirname, '..', 'output');
 const now = process.env.REPORT_DATE ? new Date(process.env.REPORT_DATE) : new Date();
-const weekNum = getWeekNumber(now);
+// 周报标注 = 当前周-1（因为抓取的是上周数据）
+const weekNum = getWeekNumber(now) - 1;
 const dateStr = formatDate(now);
 const reportTitle = `保健品市场每周热销分析报告`;
 
@@ -196,6 +197,7 @@ async function main() {
   let fetchResults = null;
   try {
     const rf = require('./fetch-real-data.js');
+    rf.setWeek(weekNum);  // v5.4: 设置周次，缓存按周归档
     fetchResults = await rf.initDataFetch();
     // 将抓取结果注入 data-generator 可用的运行时数据
     rf.setRuntimeData(fetchResults);

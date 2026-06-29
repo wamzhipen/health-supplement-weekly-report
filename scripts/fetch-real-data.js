@@ -21,12 +21,27 @@ const fs = require('fs');
 const path = require('path');
 const CACHE_DIR = path.join(__dirname, '..', 'output', 'cache');
 
+// 当前周次（用于按周归档）
+let currentWeek = null;
+function setWeek(weekNum) { currentWeek = weekNum; }
+function getCacheDir() {
+  if (!currentWeek) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now - start;
+    currentWeek = Math.ceil((diff / 86400000 + start.getDay() + 1) / 7) - 1; // 数据反映上周
+  }
+  const dir = path.join(CACHE_DIR, 'W' + currentWeek);
+  try { fs.mkdirSync(dir, { recursive: true }); } catch(e) {}
+  return dir;
+}
+
 // 确保缓存目录存在
 try { fs.mkdirSync(CACHE_DIR, { recursive: true }); } catch(e) {}
 
 // ═══════════════ 缓存管理 ═══════════════
 function readCache(filename, ttlMs = 24 * 60 * 60 * 1000) {
-  const filepath = path.join(CACHE_DIR, filename);
+  const filepath = path.join(getCacheDir(), filename);
   try {
     const cache = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
     if (Date.now() - cache._cachedAt < ttlMs) {
@@ -39,7 +54,7 @@ function readCache(filename, ttlMs = 24 * 60 * 60 * 1000) {
 }
 
 function writeCache(filename, data) {
-  const filepath = path.join(CACHE_DIR, filename);
+  const filepath = path.join(getCacheDir(), filename);
   fs.writeFileSync(filepath, JSON.stringify({ _cachedAt: Date.now(), data }, null, 2));
 }
 
@@ -94,8 +109,10 @@ async function fetchIHerbBestSellers() {
 // ═══════════════ Google Trends 缓存读取 ═══════════════
 async function fetchGoogleTrends() {
   const cache = readCache('google_trends.json', 7 * 24 * 60 * 60 * 1000);
-  if (cache.data && cache.data.trends && cache.data.trends.length >= 10) {
-    console.log(`   ✅ Google Trends: ${cache.data.trends.length}关键词 (${cache.valid ? '缓存有效' : '缓存过期但仍可用'})`);
+  // 支持两种缓存格式：{ trends: [...] } 或 { topKeywords: [...] }
+  const trendData = cache.data && (cache.data.trends || cache.data.topKeywords);
+  if (trendData && trendData.length >= 10) {
+    console.log(`   ✅ Google Trends: ${trendData.length}关键词 (${cache.valid ? '缓存有效' : '缓存过期但仍可用'})`);
     return { data: cache.data, source: cache.valid ? 'cache' : 'cache(expired)', age: cache.age };
   }
   console.log('   ⚠️ Google Trends 缓存不存在，将使用硬编码降级');
@@ -530,7 +547,9 @@ module.exports = {
   getShopeeThreeLists, getOzonThreeLists,
   // v4.0 新增：自动抓取
   initDataFetch, setRuntimeData, getDataFreshnessReport,
-  enrichProducts, readCache, writeCache
+  enrichProducts, readCache, writeCache,
+  // v5.4 新增：按周归档
+  setWeek
 };
 
 if (require.main === module) {
