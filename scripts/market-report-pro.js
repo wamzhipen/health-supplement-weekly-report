@@ -27,7 +27,7 @@ try {
 
 // ==================== 配置 ====================
 const OUTPUT_DIR = path.join(__dirname, '..', 'output');
-const now = new Date();
+const now = process.env.REPORT_DATE ? new Date(process.env.REPORT_DATE) : new Date();
 const weekNum = getWeekNumber(now);
 const dateStr = formatDate(now);
 const reportTitle = `保健品市场每周热销分析报告`;
